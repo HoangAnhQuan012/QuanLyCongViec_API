@@ -22,6 +22,7 @@ using quanLyCongViec.Roles.Dto;
 using quanLyCongViec.Users.Dto;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using quanLyCongViec.DbEntities;
 
 namespace quanLyCongViec.Users
 {
@@ -34,6 +35,7 @@ namespace quanLyCongViec.Users
         private readonly IPasswordHasher<User> _passwordHasher;
         private readonly IAbpSession _abpSession;
         private readonly LogInManager _logInManager;
+        private readonly IRepository<Units> _unitsRepository;
 
         public UserAppService(
             IRepository<User, long> repository,
@@ -42,7 +44,8 @@ namespace quanLyCongViec.Users
             IRepository<Role> roleRepository,
             IPasswordHasher<User> passwordHasher,
             IAbpSession abpSession,
-            LogInManager logInManager)
+            LogInManager logInManager,
+            IRepository<Units> unitRepository)
             : base(repository)
         {
             _userManager = userManager;
@@ -51,6 +54,7 @@ namespace quanLyCongViec.Users
             _passwordHasher = passwordHasher;
             _abpSession = abpSession;
             _logInManager = logInManager;
+            _unitsRepository = unitRepository;
         }
 
         public override async Task<UserDto> CreateAsync(CreateUserDto input)
@@ -58,6 +62,7 @@ namespace quanLyCongViec.Users
             CheckCreatePermission();
 
             var user = ObjectMapper.Map<User>(input);
+            user.UnitName = this._unitsRepository.GetAll().Where(w => w.Id == input.UnitId).Select(s => s.UnitName).FirstOrDefault();
 
             user.TenantId = AbpSession.TenantId;
             user.IsEmailConfirmed = true;
@@ -175,6 +180,13 @@ namespace quanLyCongViec.Users
             }
 
             return user;
+        }
+
+        public async Task<GetUserOutputDto> GetForEditAsync(long id)
+        {
+            var entity = await this._userManager.GetUserByIdAsync(id);
+            var edit = this.ObjectMapper.Map<GetUserOutputDto>(entity);
+            return await Task.FromResult(edit);
         }
 
         protected override IQueryable<User> ApplySorting(IQueryable<User> query, PagedUserResultRequestDto input)

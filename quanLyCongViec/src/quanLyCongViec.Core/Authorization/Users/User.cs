@@ -30,5 +30,10 @@ namespace quanLyCongViec.Authorization.Users
 
             return user;
         }
+
+        public int UnitId { get; set; }
+
+        public string UnitName { get; set; }
+
     }
 }

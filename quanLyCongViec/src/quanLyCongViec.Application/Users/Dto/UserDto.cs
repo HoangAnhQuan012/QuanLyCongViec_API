@@ -35,6 +35,10 @@ namespace quanLyCongViec.Users.Dto
 
         public DateTime CreationTime { get; set; }
 
+        public long UnitId { get; set; }
+
+        public string UnitName { get; set; }
+
         public string[] RoleNames { get; set; }
     }
 }

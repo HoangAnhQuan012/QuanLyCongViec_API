@@ -36,6 +36,9 @@ namespace quanLyCongViec.Users.Dto
         [DisableAuditing]
         public string Password { get; set; }
 
+        [Required]
+        public int UnitId { get; set; }
+
         public void Normalize()
         {
             if (RoleNames == null)
