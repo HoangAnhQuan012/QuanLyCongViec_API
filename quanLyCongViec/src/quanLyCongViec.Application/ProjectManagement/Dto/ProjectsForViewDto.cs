@@ -1,4 +1,5 @@
-﻿using quanLyCongViec.DbEntities;
+﻿using Abp.Application.Services.Dto;
+using quanLyCongViec.DbEntities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +18,7 @@ namespace quanLyCongViec.ProjectManagement.Dto
         public int? Status { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        public string Note { get; set; }
+        public DateTime CreationTime { get; set; }
     }
 }
