@@ -14,10 +14,11 @@ namespace quanLyCongViec.ProjectManagement.Dto
         public string Customer { get; set; }
         public long ProjectManagerId { get; set; }
         public string ProjectManagerName { get; set; }
-        public int? Status { get; set; }
+        public int Status { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Note { get; set; }
+        public List<int> UserId { get; set; }
         public List<ProjectAttachedFiles> ProjectAttachedFiles { get; set; }
     }
 }

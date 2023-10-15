@@ -13,6 +13,8 @@ using quanLyCongViec.Authentication.JwtBearer;
 using quanLyCongViec.Configuration;
 using quanLyCongViec.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using System.IO;
+using Abp.IO;
 
 namespace quanLyCongViec
 {
@@ -71,6 +73,30 @@ namespace quanLyCongViec
         {
             IocManager.Resolve<ApplicationPartManager>()
                 .AddApplicationPartsIfNotAddedBefore(typeof(quanLyCongViecWebCoreModule).Assembly);
+            SetAppFolders();
+        }
+
+        private void SetAppFolders()
+        {
+            var appFolders = IocManager.Resolve<AppFolder>();
+
+            appFolders.TempFileDownloadFolder = Path.Combine(_env.WebRootPath, $"Temp{Path.DirectorySeparatorChar}Downloads");
+
+            appFolders.ProjectFileUploadFolder = Path.Combine(_env.WebRootPath, $"Upload{Path.DirectorySeparatorChar}Project");
+            appFolders.ProjectFileDownloadFolder = Path.Combine(_env.WebRootPath, $"Temp{Path.DirectorySeparatorChar}Downloads{Path.DirectorySeparatorChar}Imports{Path.DirectorySeparatorChar}Project");
+
+            appFolders.WorkReportFileUploadFolder = Path.Combine(_env.WebRootPath, $"Upload{Path.DirectorySeparatorChar}WorkReport");
+            appFolders.WorkReportFileDownloadFolder = Path.Combine(_env.WebRootPath, $"Temp{Path.DirectorySeparatorChar}Downloads{Path.DirectorySeparatorChar}Imports{Path.DirectorySeparatorChar}WorkReport");
+
+            try
+            {
+                DirectoryHelper.CreateIfNotExists(appFolders.TempFileDownloadFolder);
+                DirectoryHelper.CreateIfNotExists(appFolders.ProjectFileDownloadFolder);
+                DirectoryHelper.CreateIfNotExists(appFolders.ProjectFileUploadFolder);
+                DirectoryHelper.CreateIfNotExists(appFolders.WorkReportFileDownloadFolder);
+                DirectoryHelper.CreateIfNotExists(appFolders.WorkReportFileUploadFolder);
+            }
+            catch {}
         }
     }
 }

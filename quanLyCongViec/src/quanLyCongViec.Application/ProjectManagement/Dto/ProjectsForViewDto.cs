@@ -16,6 +16,7 @@ namespace quanLyCongViec.ProjectManagement.Dto
         public long ProjectManagerId { get; set; }
         public string ProjectManagerName { get; set; }
         public int? Status { get; set; }
+        public string StatusName { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Note { get; set; }

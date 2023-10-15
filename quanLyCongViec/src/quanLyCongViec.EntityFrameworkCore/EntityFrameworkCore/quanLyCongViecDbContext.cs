@@ -13,6 +13,11 @@ namespace quanLyCongViec.EntityFrameworkCore
         public DbSet<Projects> Projects { get; set; }
         public DbSet<ProjectAttachedFiles> ProjectAttachedFiles { get; set; }
         public DbSet<Units> Staffs { get; set; }
+        public DbSet<Job> Job { get; set; }
+        public DbSet<Module> Module { get; set; }
+        public DbSet<Sprint> Sprint { get; set; }
+        public DbSet<WorkReport> WorkReport { get; set; }
+        public DbSet<WorkReportAttachedFiles> WorkReportAttachedFiles { get; set; }
         
         public quanLyCongViecDbContext(DbContextOptions<quanLyCongViecDbContext> options)
             : base(options)
