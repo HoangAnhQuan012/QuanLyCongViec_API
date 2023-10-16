@@ -15,6 +15,7 @@ namespace quanLyCongViec.WorkReportManagement.Dtos
         public int ModuleId { get; set; }
         public DateTime DeclarationDate { get; set; }
         public List<JobList> JobList { get; set; }
+        public int Status { get; set; }
         public List<WorkReportAttachedFiles> AttachedFiles { get; set; }
     }
 

@@ -14,5 +14,12 @@ namespace quanLyCongViec.Global
             InProgress,
             Completed
         }
+
+        public enum WorkReportStatus
+        {
+            WaitForAppoval = 0,
+            Approved,
+            Rejected
+        }
     }
 }

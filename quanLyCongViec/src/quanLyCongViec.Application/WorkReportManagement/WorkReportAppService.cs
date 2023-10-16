@@ -1,4 +1,7 @@
-﻿using Abp.Domain.Repositories;
+﻿using Abp.Application.Services.Dto;
+using Abp.Collections.Extensions;
+using Abp.Domain.Repositories;
+using Abp.Linq.Extensions;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
 using quanLyCongViec.Data.Excel.Dtos;
@@ -12,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static quanLyCongViec.Global.GlobalConst;
 
 namespace quanLyCongViec.WorkReportManagement
 {
@@ -40,6 +44,67 @@ namespace quanLyCongViec.WorkReportManagement
             _jobRepository = jobRepository;
         }
 
+        public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(PagedResultRequestDto input)
+        {
+            try
+            {
+                var result = from report in this._workReportRepository.GetAll()
+                             from sprint in this._sprintRepository.GetAll().Where(e => e.Id == report.SprintId)
+                             from module in this._moduleRepository.GetAll().Where(e => e.Id == report.ModuleId)
+                             select new GetAllWorkReportForViewDto()
+                             {
+                                 Id = report.Id,
+                                 DeclarationDate = report.DeclarationDate,
+                                 SprineName = sprint.SprintName,
+                                 ModuleName = module.ModuleName,
+                                 Hours = report.Hours,
+                                 Status = GlobalModel.WorkReportStatus[report.Status],
+                                 StatusId = report.Status,
+                                 GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
+                                                     from work in this._workReportRepository.GetAll().Where(e => e.Id == report.Id)
+                                                     from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id)
+                                                     select new GetAllDetails
+                                                     {
+                                                         JobName = job.JobName,
+                                                         KindOfJobName = GlobalModel.KindOfJob[work.KindOfJob],
+                                                         TypeName = GlobalModel.Type[work.Type],
+                                                         Hours = work.Hours,
+                                                     }).ToList()
+                             };
+
+                int totalCount = await result.CountAsync();
+                var output = await result.PageBy(input).ToListAsync();
+
+                return new PagedResultDto<GetAllWorkReportForViewDto>(totalCount, output);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<string> UpdateWorkReportStatus(UpdateReportStatusInput input)
+        {
+            var update = this._workReportRepository.GetAll().Where(e => e.Id == input.Id).FirstOrDefault();
+
+            if (update != null)
+            {
+                if (input.Status)
+                {
+                    update.Status = (int)WorkReportStatus.Approved;
+                }
+                else if (!input.Status)
+                {
+                    update.Status = (int)WorkReportStatus.Rejected;
+                }
+            }
+            else
+            {
+                return "Data not found";
+            }
+
+            return "Update success";
+        }
         public async Task CreateOrEditWorkReportAsync(CreateWorkReportInputDto input)
         {
             try
@@ -56,6 +121,8 @@ namespace quanLyCongViec.WorkReportManagement
                         ProjectId = input.ProjectId,
                         SprintId = input.SprintId,
                         ModuleId = input.ModuleId,
+                        DeclarationDate = input.DeclarationDate.ToLocalTime(),
+                        Status = input.Status
                     };
 
                     foreach (var item in input.JobList)
@@ -93,6 +160,8 @@ namespace quanLyCongViec.WorkReportManagement
                     update.ProjectId = input.ProjectId;
                     update.SprintId = input.SprintId;
                     update.ModuleId = input.ModuleId;
+                    update.DeclarationDate = input.DeclarationDate.ToLocalTime();
+                    update.Status = input.Status;
                     foreach (var item in input.JobList)
                     {
                         update.JobId = item.JobId;
@@ -124,9 +193,9 @@ namespace quanLyCongViec.WorkReportManagement
             }
         }
 
-        public async Task<List<LookupTableDto>> GetAllSprint()
+        public async Task<List<LookupTableDto>> GetAllSprint(int ProjectId)
         {
-            var query = await this._sprintRepository.GetAll().Select(e => new LookupTableDto
+            var query = await this._sprintRepository.GetAll().Where(w => w.ProjectId == ProjectId).Select(e => new LookupTableDto
             {
                 Id = e.Id,
                 DisplayName = e.SprintName
@@ -134,9 +203,9 @@ namespace quanLyCongViec.WorkReportManagement
             return query;
         }
 
-        public async Task<List<LookupTableDto>> GetAllModule()
+        public async Task<List<LookupTableDto>> GetAllModule(int ProjectId)
         {
-            var query = await this._moduleRepository.GetAll().Select(e => new LookupTableDto
+            var query = await this._moduleRepository.GetAll().Where(w => w.ProjectId == ProjectId).Select(e => new LookupTableDto
             {
                 Id = e.Id,
                 DisplayName = e.ModuleName

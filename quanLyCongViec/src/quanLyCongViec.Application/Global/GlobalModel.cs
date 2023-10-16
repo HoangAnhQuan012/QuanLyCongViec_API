@@ -22,18 +22,25 @@ namespace quanLyCongViec.Global
             {3, "Fix bug" },
             {4, "Unit Test" },
             {5, "Fix bug UT" },
-            {6, "Họp" },
-            {7, "Chờ việc" },
+            {6, "Meeting" },
+            {7, "Waiting for work" },
             {8, "Trực hệ thống" },
-            {9, "Viết BRD" },
+            {9, "Write BRD" },
             {10, "Merge build code" }
         };
 
         public static SortedList<int, string> Type = new SortedList<int, string>
         {
-            {1, "Bình thường" },
+            {1, "Normal" },
             {2, "OT" },
             {3, "Outsource" }
+        };
+
+        public static SortedList<int, string> WorkReportStatus = new SortedList<int, string>
+        {
+            { 0, "Wait for approval" },
+            { 1, "Approved" },
+            { 2, "Rejected" },
         };
     }
 }
