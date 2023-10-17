@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Abp.Authorization.Users;
 using Abp.Extensions;
+using quanLyCongViec.DbEntities;
 
 namespace quanLyCongViec.Authorization.Users
 {
@@ -34,6 +35,7 @@ namespace quanLyCongViec.Authorization.Users
         public int UnitId { get; set; }
 
         public string UnitName { get; set; }
+        public ICollection<ProjectUser> ProjectUsers { get; set; }
 
     }
 }

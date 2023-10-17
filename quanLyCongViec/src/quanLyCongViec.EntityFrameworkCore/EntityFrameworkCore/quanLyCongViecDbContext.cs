@@ -18,6 +18,7 @@ namespace quanLyCongViec.EntityFrameworkCore
         public DbSet<Sprint> Sprint { get; set; }
         public DbSet<WorkReport> WorkReport { get; set; }
         public DbSet<WorkReportAttachedFiles> WorkReportAttachedFiles { get; set; }
+        public DbSet<ProjectUser> ProjectUser { get; set; }
         
         public quanLyCongViecDbContext(DbContextOptions<quanLyCongViecDbContext> options)
             : base(options)

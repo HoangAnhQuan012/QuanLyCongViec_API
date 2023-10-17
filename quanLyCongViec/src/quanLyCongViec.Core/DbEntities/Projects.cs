@@ -22,6 +22,7 @@ namespace quanLyCongViec.DbEntities
         public virtual DateTime EndDate { get; set; }
         public virtual string Note { get; set; }
         public virtual int UserId { get; set; }
+        public virtual ICollection<ProjectUser> ProjectUsers { get; set; }
         public virtual ICollection<ProjectAttachedFiles> ProjectAttachedFiles { get; set; }
     }
 }

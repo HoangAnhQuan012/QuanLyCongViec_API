@@ -27,6 +27,7 @@ namespace quanLyCongViec.ProjectManagement
         private readonly IRepository<User, long> _userRepository;
         private readonly IRepository<Units> _unitRepository;
         private readonly IRepository<ProjectAttachedFiles, long> _attachedFilesRepository;
+        private readonly IRepository<ProjectUser> _projectUserRepository;
         private readonly IWebHostEnvironment _env;
         private readonly IAppFolder _appFolder;
         public ProjectManagementAppService(
@@ -35,7 +36,8 @@ namespace quanLyCongViec.ProjectManagement
             IRepository<Units> unitsRepository,
             IRepository<ProjectAttachedFiles, long> attachedFilesRepository,
             IWebHostEnvironment env,
-            IAppFolder appFolder)
+            IAppFolder appFolder,
+            IRepository<ProjectUser> projectUserRepository)
         {
             this._projectRepository = projectRepository;
             this._userRepository = userRepository;
@@ -43,6 +45,7 @@ namespace quanLyCongViec.ProjectManagement
             this._attachedFilesRepository = attachedFilesRepository;
             this._env = env;
             _appFolder = appFolder;
+            _projectUserRepository = projectUserRepository;
         }
 
         public async Task<PagedResultDto<ProjectsForViewDto>> GetAllProjectAsync(GetAllInputDto input)
@@ -86,15 +89,14 @@ namespace quanLyCongViec.ProjectManagement
 
         public async Task CreateOrEditProjectAsync (ProjectInputDto input)
         {
-            if (input.Id == null || input.Id == 0)
+            try
             {
-                foreach (var id in input.UserId)
+                if (input.Id == null || input.Id == 0)
                 {
                     input.ProjectManagerName = GlobalFunction.RegexFormat(input.ProjectManagerName);
                     input.ProjectName = GlobalFunction.RegexFormat(input.ProjectName);
                     input.Customer = GlobalFunction.RegexFormat(input.Customer);
                     input.Note = GlobalFunction.RegexFormat(input.Note);
-
                     var create = new Projects
                     {
                         ProjectName = input.ProjectName,
@@ -103,9 +105,7 @@ namespace quanLyCongViec.ProjectManagement
                         StartDate = input.StartDate,
                         EndDate = input.EndDate,
                         Note = input.Note,
-                        UserId = id,
                     };
-
                     if (input.ProjectManagerId == null)
                     {
                         create.ProjectManagerId = await this._userRepository.GetAll().Where(e => e.Id == this.AbpSession.UserId).Select(e => e.Id).FirstOrDefaultAsync();
@@ -127,25 +127,28 @@ namespace quanLyCongViec.ProjectManagement
                         {
                             FileName = e.FileName,
                             FilePath = e.FilePath,
-
                         }));
                     }
-
                     create.ProjectAttachedFiles = projectAttachedFiles;
 
+                    List<ProjectUser> projectUsers = new List<ProjectUser>();
+                    if (input.ProjectUsers != null)
+                    {
+                        projectUsers.AddRange(input.ProjectUsers.Select(e => new ProjectUser
+                        {
+                            UserId = e.UserId,
+                        }));
+                    }
+                    create.ProjectUsers = projectUsers;
                     await this._projectRepository.InsertAndGetIdAsync(create);
                 }
-            }
-            else
-            {
-                var update = await this._projectRepository.FirstOrDefaultAsync(e => e.Id == input.Id);
-                if (update == null)
+                else
                 {
-                    throw new UserFriendlyException("Input is null");
-                }
-
-                foreach (var user in input.UserId)
-                {
+                    var update = await this._projectRepository.FirstOrDefaultAsync(e => e.Id == input.Id);
+                    if (update == null)
+                    {
+                        throw new UserFriendlyException("Input is null");
+                    }
                     update.ProjectName = input.ProjectName;
                     update.Customer = input.Customer;
                     update.ProjectManagerId = this._projectRepository.GetAll().Where(e => e.Id == input.Id).Select(w => w.ProjectManagerId).FirstOrDefault();
@@ -154,13 +157,12 @@ namespace quanLyCongViec.ProjectManagement
                     update.StartDate = input.StartDate.ToLocalTime();
                     update.EndDate = input.EndDate.ToLocalTime();
                     update.Note = input.Note;
-                    update.UserId = user;
 
-                    foreach(var item in input.ProjectAttachedFiles)
+                    foreach (var item in input.ProjectAttachedFiles)
                     {
                         var file = new ProjectAttachedFiles
                         {
-                            ProjectId = input.Id,
+                            ProjectsId = input.Id,
                             FileName = item.FileName,
                             FilePath = item.FilePath
                         };
@@ -168,9 +170,22 @@ namespace quanLyCongViec.ProjectManagement
                         await this._attachedFilesRepository.InsertAsync(file);
                     }
 
+                    foreach (var item in input.ProjectUsers)
+                    {
+                        var projectUser = new ProjectUser
+                        {
+                            ProjectsId = input.Id,
+                            UserId = item.UserId,
+                        };
+                        await this._projectUserRepository.InsertAsync(projectUser);
+                    }
+
                     await this._projectRepository.UpdateAsync(update);
                 }
-
+            }
+            catch (Exception ex)
+            {
+                throw ex;
             }
         }
 
@@ -200,23 +215,66 @@ namespace quanLyCongViec.ProjectManagement
               return GlobalModel.ProjectStatusSorted[(int)GlobalConst.ProjectStatus.NotStarted];
         }
 
-        public async Task<ProjectsForViewDto> GetForEdit(int id)
+        public async Task<ProjectsForViewDto> GetForEdit(int id, string projectName)
         {
-            List<ProjectAttachedFiles> projectAttachedFiles = new List<ProjectAttachedFiles>();
-            var query = await this._projectRepository.GetAll().Where(e => e.Id == id).Select(s => new ProjectsForViewDto
+            try
             {
-                Id = s.Id,
-                ProjectManagerName = s.ProjectManagerName,
-                ProjectName = s.ProjectName,
-                Customer = s.Customer,
-                Status = s.Status,
-                StatusName = GlobalModel.ProjectStatusSorted[(int)s.Status],
-                StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                Note = s.Note,
-            }).FirstOrDefaultAsync();
+                List<ProjectAttachedFiles> projectAttachedFiles = new List<ProjectAttachedFiles>();
+                var query = await this._projectRepository.GetAll().Where(e => e.Id == id).Select(s => new ProjectsForViewDto
+                {
+                    Id = s.Id,
+                    ProjectManagerName = s.ProjectManagerName,
+                    ProjectName = s.ProjectName,
+                    Customer = s.Customer,
+                    Status = s.Status,
+                    StatusName = GlobalModel.ProjectStatusSorted[(int)s.Status],
+                    StartDate = s.StartDate,
+                    EndDate = s.EndDate,
+                    Note = s.Note,
+                }).FirstOrDefaultAsync();
 
-            return query;
+                var listProjectUser = await this._projectUserRepository.GetAll().Where(w => w.ProjectsId == id).ToListAsync();
+                query.ListUsers = new List<LookupTableDto>();
+                if (listProjectUser.Count > 0)
+                {
+                    foreach (var item in listProjectUser)
+                    {
+                        var queryUser = await this._userRepository.GetAll().Where(e => e.Id == item.UserId).Select(s => s.Name).FirstOrDefaultAsync();
+                        query.ListUsers.Add(new LookupTableDto()
+                        {
+                            Id = item.UserId,
+                            DisplayName = queryUser,
+                        });
+                    }
+                }
+
+                var listFileDinhKem = await this._attachedFilesRepository.GetAll().Where(w => w.ProjectsId == id).ToListAsync();
+
+                if (listFileDinhKem.Count > 0)
+                {
+                    foreach (var item in listFileDinhKem)
+                    {
+                        projectAttachedFiles.Add(item);
+                    }
+                }
+
+                query.ListFile = projectAttachedFiles;
+
+                return query;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task DeleteProjectAsync(int id)
+        {
+            if (id == 0 || id == null)
+            {
+                throw new UserFriendlyException("Input is null");
+            }
+            await this._projectRepository.DeleteAsync(id);
         }
 
         public async Task<int> CheckAdmin()
@@ -232,6 +290,12 @@ namespace quanLyCongViec.ProjectManagement
                 Id = (int)s.Id,
                 DisplayName = s.Name,
             }).ToListAsync();
+            return query;
+        }
+
+        public async Task<string> GetProjectName(int id)
+        {
+            var query = this._projectRepository.GetAll().Where(e => e.Id == id).Select(s => s.ProjectName).FirstOrDefault();
             return query;
         }
     }

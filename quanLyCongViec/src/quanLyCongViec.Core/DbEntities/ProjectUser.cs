@@ -1,5 +1,5 @@
-﻿using Abp.Domain.Entities;
-using Abp.Domain.Entities.Auditing;
+﻿using Abp.Domain.Entities.Auditing;
+using Abp.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -9,12 +9,11 @@ using System.Threading.Tasks;
 
 namespace quanLyCongViec.DbEntities
 {
-    [Table("ProjectAttachedFiles")]
-    public class ProjectAttachedFiles : FullAuditedEntity<long>, IMayHaveTenant
+    [Table("ProjectUser")]
+    public class ProjectUser : FullAuditedEntity<int>, IMayHaveTenant
     {
         public int? TenantId { get; set; }
         public int ProjectsId { get; set; }
-        public string FileName { get; set; }
-        public string FilePath { get; set; }
+        public int UserId { get; set; }
     }
 }

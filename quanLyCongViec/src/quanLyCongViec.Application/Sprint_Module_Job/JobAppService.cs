@@ -37,9 +37,9 @@ namespace quanLyCongViec.Sprint_Module_Job
             await this._jobRepository.InsertAsync(create);
         }
 
-        public async Task<List<LookupTableDto>> GetAllSprint()
+        public async Task<List<LookupTableDto>> GetAllSprint(int projectId)
         {
-            var query = await this._sprintRepository.GetAll().Select(e => new LookupTableDto
+            var query = await this._sprintRepository.GetAll().Where(w => w.ProjectId == projectId).Select(e => new LookupTableDto
             {
                 Id = e.Id,
                 DisplayName = e.SprintName

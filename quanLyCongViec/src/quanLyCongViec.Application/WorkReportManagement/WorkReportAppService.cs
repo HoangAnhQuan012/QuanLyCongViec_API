@@ -44,13 +44,14 @@ namespace quanLyCongViec.WorkReportManagement
             _jobRepository = jobRepository;
         }
 
-        public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(PagedResultRequestDto input)
+        public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(GetAllInputDto input)
         {
             try
             {
-                var result = from report in this._workReportRepository.GetAll()
+                var result = from report in this._workReportRepository.GetAll().Where(e => e.ProjectId == input.ProjectId)
                              from sprint in this._sprintRepository.GetAll().Where(e => e.Id == report.SprintId)
                              from module in this._moduleRepository.GetAll().Where(e => e.Id == report.ModuleId)
+                             from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
                              select new GetAllWorkReportForViewDto()
                              {
                                  Id = report.Id,
@@ -60,22 +61,69 @@ namespace quanLyCongViec.WorkReportManagement
                                  Hours = report.Hours,
                                  Status = GlobalModel.WorkReportStatus[report.Status],
                                  StatusId = report.Status,
-                                 GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
-                                                     from work in this._workReportRepository.GetAll().Where(e => e.Id == report.Id)
-                                                     from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id)
-                                                     select new GetAllDetails
-                                                     {
-                                                         JobName = job.JobName,
-                                                         KindOfJobName = GlobalModel.KindOfJob[work.KindOfJob],
-                                                         TypeName = GlobalModel.Type[work.Type],
-                                                         Hours = work.Hours,
-                                                     }).ToList()
+                                 CreationTime = report.CreationTime,
+                                 JobName = job.JobName,
+                                 KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
+                                 TypeName = GlobalModel.Type[report.Type],
+                                 OnSite = report.OnSite,
+                                 Note = report.Note,
+                                 //GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
+                                 //                    from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id).DefaultIfEmpty()
+                                 //                    select new GetAllDetails
+                                 //                    {
+                                 //                        JobName = job.JobName,
+                                 //                        KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
+                                 //                        TypeName = GlobalModel.Type[report.Type],
+                                 //                        Hours = report.Hours,
+                                 //                    }).ToList()
                              };
 
                 int totalCount = await result.CountAsync();
-                var output = await result.PageBy(input).ToListAsync();
+                var output = await result.OrderByDescending(e => e.CreationTime).PageBy(input).ToListAsync();
 
                 return new PagedResultDto<GetAllWorkReportForViewDto>(totalCount, output);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        public async Task<WorkReportForViewDto> GetForEdit (int id)
+        {
+            try
+            {
+                List<WorkReportAttachedFiles> workReportAttachedFiles = new List<WorkReportAttachedFiles>();
+                var query = await (from report in this._workReportRepository.GetAll().Where(e => e.Id == id)
+                                   from sprint in this._sprintRepository.GetAll().Where(e => e.Id == report.SprintId)
+                                   from module in this._moduleRepository.GetAll().Where(e => e.Id == report.ModuleId)
+                                   from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
+                                   select new WorkReportForViewDto
+                                   {
+                                       Id = id,
+                                       SpintName = sprint.SprintName,
+                                       ModuleName = module.ModuleName,
+                                       DeclarationDate = report.DeclarationDate,
+                                       JobName = job.JobName,
+                                       KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
+                                       TypeName = GlobalModel.Type[report.Type],
+                                       OnSite = report.OnSite,
+                                       Hours = report.Hours,
+                                       Note = report.Note
+                                   }).FirstOrDefaultAsync();
+                var listDinhKem = await this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == id).ToListAsync();
+
+                if (listDinhKem.Count > 0)
+                {
+                    foreach (var item in listDinhKem)
+                    {
+                        workReportAttachedFiles.Add(item);
+                    }
+                }
+
+                query.ListFile = workReportAttachedFiles;
+
+                return query;
             }
             catch (Exception ex)
             {
@@ -122,18 +170,24 @@ namespace quanLyCongViec.WorkReportManagement
                         SprintId = input.SprintId,
                         ModuleId = input.ModuleId,
                         DeclarationDate = input.DeclarationDate.ToLocalTime(),
-                        Status = input.Status
+                        Status = input.Status,
+                        JobId = input.JobId,
+                        KindOfJob = input.KindOfJob,
+                        Type = input.Type,
+                        OnSite = input.OnSite,
+                        Hours = input.Hours,
+                        Note = input.Note
                     };
 
-                    foreach (var item in input.JobList)
-                    {
-                        create.JobId = item.JobId;
-                        create.KindOfJob = item.KindOfJob;
-                        create.Type = item.Type;
-                        create.OnSite = item.OnSite;
-                        create.Hours = item.Hours;
-                        create.Note = item.Note;
-                    }
+                    //foreach (var item in input.JobList)
+                    //{
+                    //    create.JobId = item.JobId;
+                    //    create.KindOfJob = item.KindOfJob;
+                    //    create.Type = item.Type;
+                    //    create.OnSite = item.OnSite;
+                    //    create.Hours = item.Hours;
+                    //    create.Note = item.Note;
+                    //}
 
                     List<WorkReportAttachedFiles> workReportAttachedFiles = new List<WorkReportAttachedFiles>();
                     if (input.AttachedFiles != null)
@@ -162,15 +216,21 @@ namespace quanLyCongViec.WorkReportManagement
                     update.ModuleId = input.ModuleId;
                     update.DeclarationDate = input.DeclarationDate.ToLocalTime();
                     update.Status = input.Status;
-                    foreach (var item in input.JobList)
-                    {
-                        update.JobId = item.JobId;
-                        update.KindOfJob = item.KindOfJob;
-                        update.Type = item.Type;
-                        update.OnSite = item.OnSite;
-                        update.Hours = item.Hours;
-                        update.Note = item.Note;
-                    }
+                    update.JobId = input.JobId;
+                    update.KindOfJob = input.KindOfJob;
+                    update.Type = input.Type;
+                    update.OnSite = input.OnSite;
+                    update.Hours = input.Hours;
+                    update.Note = input.Note;
+                    //foreach (var item in input.JobList)
+                    //{
+                    //    update.JobId = item.JobId;
+                    //    update.KindOfJob = item.KindOfJob;
+                    //    update.Type = item.Type;
+                    //    update.OnSite = item.OnSite;
+                    //    update.Hours = item.Hours;
+                    //    update.Note = item.Note;
+                    //}
 
                     foreach (var item in input.AttachedFiles)
                     {
@@ -191,6 +251,15 @@ namespace quanLyCongViec.WorkReportManagement
             {
                 throw ex;
             }
+        }
+
+        public async Task DeleteWorkReportAsync(int id)
+        {
+            if (id == 0 || id == null)
+            {
+                throw new UserFriendlyException("Input is null");
+            }
+            await this._workReportRepository.DeleteAsync(id);
         }
 
         public async Task<List<LookupTableDto>> GetAllSprint(int ProjectId)

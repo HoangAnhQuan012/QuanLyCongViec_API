@@ -18,7 +18,7 @@ namespace quanLyCongViec.ProjectManagement.Dto
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Note { get; set; }
-        public List<int> UserId { get; set; }
+        public List<ProjectUser> ProjectUsers { get; set; }
         public List<ProjectAttachedFiles> ProjectAttachedFiles { get; set; }
     }
 }
