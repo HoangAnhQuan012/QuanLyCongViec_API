@@ -19,6 +19,7 @@ namespace quanLyCongViec.WorkReportManagement.Dtos
         public bool OnSite { get; set; }
         public double Hours { get; set; }
         public string Note { get; set; }
+        public int StatusId { get; set; }
         public List<WorkReportAttachedFiles> ListFile { get; set; }
     }
 }

@@ -10,6 +10,6 @@ namespace quanLyCongViec.WorkReportManagement.Dtos
     public class UpdateReportStatusInput
     {
         public int Id { get; set; }
-        public bool Status { get; set; }
+        public int Status { get; set; }
     }
 }

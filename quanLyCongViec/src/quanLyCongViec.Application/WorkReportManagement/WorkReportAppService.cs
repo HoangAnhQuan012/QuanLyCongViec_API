@@ -109,7 +109,8 @@ namespace quanLyCongViec.WorkReportManagement
                                        TypeName = GlobalModel.Type[report.Type],
                                        OnSite = report.OnSite,
                                        Hours = report.Hours,
-                                       Note = report.Note
+                                       Note = report.Note,
+                                       StatusId = report.Status
                                    }).FirstOrDefaultAsync();
                 var listDinhKem = await this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == id).ToListAsync();
 
@@ -137,11 +138,11 @@ namespace quanLyCongViec.WorkReportManagement
 
             if (update != null)
             {
-                if (input.Status)
+                if (input.Status == (int)WorkReportStatus.WaitForAppoval)
                 {
                     update.Status = (int)WorkReportStatus.Approved;
                 }
-                else if (!input.Status)
+                else if (input.Status == (int)WorkReportStatus.Approved)
                 {
                     update.Status = (int)WorkReportStatus.Rejected;
                 }
