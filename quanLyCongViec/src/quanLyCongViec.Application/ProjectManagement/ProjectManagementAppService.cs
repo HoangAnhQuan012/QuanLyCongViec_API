@@ -204,6 +204,20 @@ namespace quanLyCongViec.ProjectManagement
             return await GlobalFunction.DownloadFileMau(fileName, path, this._appFolder.TempFileDownloadFolder);
         }
 
+        //public async Task<FileDto> ExportToExcel(GetAllInputDto input)
+        //{
+        //    if (input == null)
+        //    {
+        //        throw new UserFriendlyException("Input is null");
+        //    }
+
+        //    input.SkipCount = 0;
+        //    input.MaxResultCount = 999999999;
+        //    var list = await this.GetAllProjectAsync(input);
+
+        //    using var package = new ExcelPac
+        //}
+
         public async Task<string> GetPMbyUserIdAsync()
         {
             var query = await this._userRepository.GetAll().Where(e => e.Id == this.AbpSession.UserId).Select(s => s.Name).FirstOrDefaultAsync();

@@ -51,7 +51,7 @@ namespace quanLyCongViec.WorkReportManagement
                 var result = from report in this._workReportRepository.GetAll().Where(e => e.ProjectId == input.ProjectId)
                              from sprint in this._sprintRepository.GetAll().Where(e => e.Id == report.SprintId)
                              from module in this._moduleRepository.GetAll().Where(e => e.Id == report.ModuleId)
-                             from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
+                             //from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
                              select new GetAllWorkReportForViewDto()
                              {
                                  Id = report.Id,
@@ -62,20 +62,20 @@ namespace quanLyCongViec.WorkReportManagement
                                  Status = GlobalModel.WorkReportStatus[report.Status],
                                  StatusId = report.Status,
                                  CreationTime = report.CreationTime,
-                                 JobName = job.JobName,
-                                 KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
-                                 TypeName = GlobalModel.Type[report.Type],
-                                 OnSite = report.OnSite,
-                                 Note = report.Note,
-                                 //GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
-                                 //                    from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id).DefaultIfEmpty()
-                                 //                    select new GetAllDetails
-                                 //                    {
-                                 //                        JobName = job.JobName,
-                                 //                        KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
-                                 //                        TypeName = GlobalModel.Type[report.Type],
-                                 //                        Hours = report.Hours,
-                                 //                    }).ToList()
+                                 //JobName = job.JobName,
+                                 //KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
+                                 //TypeName = GlobalModel.Type[report.Type],
+                                 //OnSite = report.OnSite,
+                                 //Note = report.Note,
+                                 GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
+                                                     from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id).DefaultIfEmpty()
+                                                     select new GetAllDetails
+                                                     {
+                                                         JobName = job.JobName,
+                                                         KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
+                                                         TypeName = GlobalModel.Type[report.Type],
+                                                         Hours = report.Hours,
+                                                     }).ToList()
                              };
 
                 int totalCount = await result.CountAsync();
@@ -329,7 +329,7 @@ namespace quanLyCongViec.WorkReportManagement
             }
 
             var fileName = linkFile.Split(Path.DirectorySeparatorChar).Last();
-            var path = this._appFolder.ProjectFileUploadFolder + linkFile.Replace(fileName, string.Empty);
+            var path = this._appFolder.WorkReportFileUploadFolder + linkFile.Replace(fileName, string.Empty);
 
             // _appFolders.DemoFileDownloadFolder : Thư mục chưa file mẫu cần tải
             // _appFolders.TempFileDownloadFolder : Không được sửa

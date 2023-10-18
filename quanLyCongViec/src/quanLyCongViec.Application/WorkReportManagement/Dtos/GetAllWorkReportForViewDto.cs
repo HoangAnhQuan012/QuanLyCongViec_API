@@ -16,11 +16,11 @@ namespace quanLyCongViec.WorkReportManagement.Dtos
         public string Status { get; set; }
         public int StatusId { get; set; }
         public DateTime CreationTime { get; set; }
-        public string JobName { get; set; }
-        public string KindOfJobName { get; set; }
-        public string TypeName { get; set; }
-        public bool OnSite { get; set; }
-        public string Note { get; set; }
-        //public List<GetAllDetails> GetReportDetails { get; set; }
+        //public string JobName { get; set; }
+        //public string KindOfJobName { get; set; }
+        //public string TypeName { get; set; }
+        //public bool OnSite { get; set; }
+        //public string Note { get; set; }
+        public List<GetAllDetails> GetReportDetails { get; set; }
     }
 }
