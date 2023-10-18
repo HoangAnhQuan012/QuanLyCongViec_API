@@ -4,6 +4,7 @@ using Abp.Domain.Repositories;
 using Abp.Linq.Extensions;
 using Abp.UI;
 using Microsoft.EntityFrameworkCore;
+using quanLyCongViec.Authorization.Users;
 using quanLyCongViec.Data.Excel.Dtos;
 using quanLyCongViec.DbEntities;
 using quanLyCongViec.Global;
@@ -27,13 +28,19 @@ namespace quanLyCongViec.WorkReportManagement
         private readonly IAppFolder _appFolder;
         private readonly IRepository<Module> _moduleRepository;
         private readonly IRepository<Job> _jobRepository;
+        private readonly IRepository<ProjectUser, int> _projectUserRepository;
+        private readonly IRepository<User, long> _userRepository;
+        private readonly IRepository<Units> _UnitsRepository;
         public WorkReportAppService(
                 IRepository<WorkReport> workReportRepository,
                 IRepository<WorkReportAttachedFiles, long> workReportAttachedFilesRepository,
                 IAppFolder appFolder,
                 IRepository<Sprint> sprint,
                 IRepository<Module> moduleRepository,
-                IRepository<Job> jobRepository
+                IRepository<Job> jobRepository,
+                IRepository<ProjectUser, int> projectUserRepository,
+                IRepository<User, long> userRepository,
+                IRepository<Units> UnitsRepository
             )
         {
             _workReportRepository = workReportRepository;
@@ -42,15 +49,30 @@ namespace quanLyCongViec.WorkReportManagement
             _sprintRepository = sprint;
             _moduleRepository = moduleRepository;
             _jobRepository = jobRepository;
+            _projectUserRepository = projectUserRepository;
+            _userRepository = userRepository;
+            _UnitsRepository = UnitsRepository;
         }
 
         public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(GetAllInputDto input)
         {
             try
             {
-                var result = from report in this._workReportRepository.GetAll().Where(e => e.ProjectId == input.ProjectId)
+                var userId = this.AbpSession.UserId;
+                var getUnitId = await this._userRepository.GetAll().Where(e => e.Id == userId).Select(e => e.UnitId).FirstOrDefaultAsync();
+                var isManager = this._UnitsRepository.GetAll().Where(e => e.Id == getUnitId).Select(e => e.ParentUnitId).FirstOrDefault();
+
+                var getProjectIds = await this._workReportRepository.GetAll().Select(e => e.ProjectId).ToListAsync();
+                var staffId = await this._projectUserRepository.GetAll().Where(e => e.UserId == userId).Select(e => e.UserId).FirstOrDefaultAsync();
+
+                var filter = this._workReportRepository.GetAll().Where(e => e.ProjectId == input.ProjectId)
+                                                                .WhereIf(isManager == null, e => getProjectIds.Contains(e.ProjectId))
+                                                                .WhereIf(isManager != null, e => staffId == e.CreatorUserId);
+
+                var result = from report in filter
                              from sprint in this._sprintRepository.GetAll().Where(e => e.Id == report.SprintId)
                              from module in this._moduleRepository.GetAll().Where(e => e.Id == report.ModuleId)
+                             from user in this._userRepository.GetAll().Where(e => e.Id == report.CreatorUserId)
                              //from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
                              select new GetAllWorkReportForViewDto()
                              {
@@ -62,6 +84,7 @@ namespace quanLyCongViec.WorkReportManagement
                                  Status = GlobalModel.WorkReportStatus[report.Status],
                                  StatusId = report.Status,
                                  CreationTime = report.CreationTime,
+                                 UserName = user.UserName,
                                  //JobName = job.JobName,
                                  //KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
                                  //TypeName = GlobalModel.Type[report.Type],
@@ -75,6 +98,12 @@ namespace quanLyCongViec.WorkReportManagement
                                                          KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
                                                          TypeName = GlobalModel.Type[report.Type],
                                                          Hours = report.Hours,
+                                                         WorkReportAttachedFiles = (from file in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id)
+                                                                                    select new WorkReportAttachedFiles
+                                                                                    {
+                                                                                        FileName = file.FileName,
+                                                                                        FilePath = file.FilePath
+                                                                                    }).ToList()
                                                      }).ToList()
                              };
 

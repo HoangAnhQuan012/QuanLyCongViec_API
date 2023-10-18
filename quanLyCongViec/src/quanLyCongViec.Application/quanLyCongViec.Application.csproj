@@ -12,6 +12,9 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="EPPlus" Version="5.7.0" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\quanLyCongViec.Core\quanLyCongViec.Core.csproj" />
   </ItemGroup>
 </Project>

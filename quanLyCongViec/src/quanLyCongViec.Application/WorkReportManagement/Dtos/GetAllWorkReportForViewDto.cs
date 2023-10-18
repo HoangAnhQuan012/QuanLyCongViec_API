@@ -14,6 +14,7 @@ namespace quanLyCongViec.WorkReportManagement.Dtos
         public string ModuleName { get; set; }
         public double Hours { get; set; }
         public string Status { get; set; }
+        public string UserName { get; set; }
         public int StatusId { get; set; }
         public DateTime CreationTime { get; set; }
         //public string JobName { get; set; }
