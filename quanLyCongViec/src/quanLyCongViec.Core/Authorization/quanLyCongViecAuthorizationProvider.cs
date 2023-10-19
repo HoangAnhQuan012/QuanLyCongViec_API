@@ -14,6 +14,7 @@ namespace quanLyCongViec.Authorization
             context.CreatePermission(PermissionNames.Pages_Tenants, L("Tenants"), multiTenancySides: MultiTenancySides.Host);
             context.CreatePermission(PermissionNames.Pages_ProjectManager, L("ProjectManager"));
             context.CreatePermission(PermissionNames.Pages_ProjectManager_Create, L("ProjectManagerCreate"));
+            context.CreatePermission(PermissionNames.Pages_Reports, L("Reports"));
         }
 
         private static ILocalizableString L(string name)

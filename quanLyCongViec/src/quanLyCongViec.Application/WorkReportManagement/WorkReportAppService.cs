@@ -31,6 +31,7 @@ namespace quanLyCongViec.WorkReportManagement
         private readonly IRepository<ProjectUser, int> _projectUserRepository;
         private readonly IRepository<User, long> _userRepository;
         private readonly IRepository<Units> _UnitsRepository;
+        private readonly IRepository<Projects> _projectsRepository;
         public WorkReportAppService(
                 IRepository<WorkReport> workReportRepository,
                 IRepository<WorkReportAttachedFiles, long> workReportAttachedFilesRepository,
@@ -40,7 +41,8 @@ namespace quanLyCongViec.WorkReportManagement
                 IRepository<Job> jobRepository,
                 IRepository<ProjectUser, int> projectUserRepository,
                 IRepository<User, long> userRepository,
-                IRepository<Units> UnitsRepository
+                IRepository<Units> UnitsRepository,
+                IRepository<Projects> projectsRepository
             )
         {
             _workReportRepository = workReportRepository;
@@ -52,6 +54,7 @@ namespace quanLyCongViec.WorkReportManagement
             _projectUserRepository = projectUserRepository;
             _userRepository = userRepository;
             _UnitsRepository = UnitsRepository;
+            _projectsRepository = projectsRepository;
         }
 
         public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(GetAllInputDto input)
@@ -60,7 +63,7 @@ namespace quanLyCongViec.WorkReportManagement
             {
                 var userId = this.AbpSession.UserId;
                 var getUnitId = await this._userRepository.GetAll().Where(e => e.Id == userId).Select(e => e.UnitId).FirstOrDefaultAsync();
-                var isManager = this._UnitsRepository.GetAll().Where(e => e.Id == getUnitId).Select(e => e.ParentUnitId).FirstOrDefault();
+                var isManager = await this._UnitsRepository.GetAll().Where(e => e.Id == getUnitId).Select(e => e.ParentUnitId).FirstOrDefaultAsync();
 
                 var getProjectIds = await this._workReportRepository.GetAll().Select(e => e.ProjectId).ToListAsync();
                 var staffId = await this._projectUserRepository.GetAll().Where(e => e.UserId == userId).Select(e => e.UserId).FirstOrDefaultAsync();
@@ -85,11 +88,6 @@ namespace quanLyCongViec.WorkReportManagement
                                  StatusId = report.Status,
                                  CreationTime = report.CreationTime,
                                  UserName = user.UserName,
-                                 //JobName = job.JobName,
-                                 //KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
-                                 //TypeName = GlobalModel.Type[report.Type],
-                                 //OnSite = report.OnSite,
-                                 //Note = report.Note,
                                  GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
                                                      from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id).DefaultIfEmpty()
                                                      select new GetAllDetails
@@ -123,24 +121,26 @@ namespace quanLyCongViec.WorkReportManagement
             try
             {
                 List<WorkReportAttachedFiles> workReportAttachedFiles = new List<WorkReportAttachedFiles>();
-                var query = await (from report in this._workReportRepository.GetAll().Where(e => e.Id == id)
-                                   from sprint in this._sprintRepository.GetAll().Where(e => e.Id == report.SprintId)
-                                   from module in this._moduleRepository.GetAll().Where(e => e.Id == report.ModuleId)
-                                   from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
-                                   select new WorkReportForViewDto
-                                   {
-                                       Id = id,
-                                       SpintName = sprint.SprintName,
-                                       ModuleName = module.ModuleName,
-                                       DeclarationDate = report.DeclarationDate,
-                                       JobName = job.JobName,
-                                       KindOfJobName = GlobalModel.KindOfJob[report.KindOfJob],
-                                       TypeName = GlobalModel.Type[report.Type],
-                                       OnSite = report.OnSite,
-                                       Hours = report.Hours,
-                                       Note = report.Note,
-                                       StatusId = report.Status
-                                   }).FirstOrDefaultAsync();
+
+                var entity = await this._workReportRepository.GetAll().Where(w => w.Id == id).FirstOrDefaultAsync();
+                WorkReportForViewDto output = new WorkReportForViewDto();
+
+                output.SpintName = this._sprintRepository.GetAll().Where(e => e.Id == entity.SprintId).Select(e => e.SprintName).FirstOrDefault();
+                output.SprintId = entity.SprintId;
+                output.Id = entity.Id;
+                output.ModuleId = entity.ModuleId;
+                output.JobId = entity.JobId;
+                output.KindOfJobId = entity.KindOfJob;
+                output.TypeId = entity.Type;
+                output.ModuleName = this._moduleRepository.GetAll().Where(e => e.Id == entity.ModuleId).Select(e => e.ModuleName).FirstOrDefault();
+                output.DeclarationDate = entity.DeclarationDate.ToLocalTime();
+                output.JobName = this._jobRepository.GetAll().Where(e => e.Id == entity.JobId).Select(e => e.JobName).FirstOrDefault();
+                output.KindOfJobName = GlobalModel.KindOfJob[entity.KindOfJob];
+                output.TypeName = GlobalModel.Type[entity.Type];
+                output.OnSite = entity.OnSite;
+                output.Hours = entity.Hours;
+                output.Note = entity.Note;
+                output.StatusId = entity.Status;
                 var listDinhKem = await this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == id).ToListAsync();
 
                 if (listDinhKem.Count > 0)
@@ -151,9 +151,9 @@ namespace quanLyCongViec.WorkReportManagement
                     }
                 }
 
-                query.ListFile = workReportAttachedFiles;
+                output.ListFile = workReportAttachedFiles;
 
-                return query;
+                return output;
             }
             catch (Exception ex)
             {
@@ -209,16 +209,6 @@ namespace quanLyCongViec.WorkReportManagement
                         Note = input.Note
                     };
 
-                    //foreach (var item in input.JobList)
-                    //{
-                    //    create.JobId = item.JobId;
-                    //    create.KindOfJob = item.KindOfJob;
-                    //    create.Type = item.Type;
-                    //    create.OnSite = item.OnSite;
-                    //    create.Hours = item.Hours;
-                    //    create.Note = item.Note;
-                    //}
-
                     List<WorkReportAttachedFiles> workReportAttachedFiles = new List<WorkReportAttachedFiles>();
                     if (input.AttachedFiles != null)
                     {
@@ -252,15 +242,6 @@ namespace quanLyCongViec.WorkReportManagement
                     update.OnSite = input.OnSite;
                     update.Hours = input.Hours;
                     update.Note = input.Note;
-                    //foreach (var item in input.JobList)
-                    //{
-                    //    update.JobId = item.JobId;
-                    //    update.KindOfJob = item.KindOfJob;
-                    //    update.Type = item.Type;
-                    //    update.OnSite = item.OnSite;
-                    //    update.Hours = item.Hours;
-                    //    update.Note = item.Note;
-                    //}
 
                     foreach (var item in input.AttachedFiles)
                     {
@@ -363,6 +344,12 @@ namespace quanLyCongViec.WorkReportManagement
             // _appFolders.DemoFileDownloadFolder : Thư mục chưa file mẫu cần tải
             // _appFolders.TempFileDownloadFolder : Không được sửa
             return await GlobalFunction.DownloadFileMau(fileName, path, this._appFolder.TempFileDownloadFolder);
+        }
+
+        public async Task<string> GetProjectName(int projectId)
+        {
+            var result = await this._projectsRepository.GetAll().Where(e => e.Id == projectId).Select(e => e.ProjectName).FirstOrDefaultAsync();
+            return result;
         }
     }
 }

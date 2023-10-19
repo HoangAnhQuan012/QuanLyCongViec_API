@@ -10,5 +10,6 @@
         public const string Pages_Roles = "Pages.Roles";
         public const string Pages_ProjectManager = "Pages.ProjectManager";
         public const string Pages_ProjectManager_Create = "Pages.ProjectManager.Create";
+        public const string Pages_Reports = "Pages.Reports";
     }
 }
