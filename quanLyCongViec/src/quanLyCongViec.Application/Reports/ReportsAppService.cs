@@ -24,7 +24,7 @@ namespace quanLyCongViec.Reports
 
         public async Task<GetAllForViewDto> GetAllDataReports()
         {
-            var listUser = await this._userRepository.GetAll().Select(e => e.UserName).ToListAsync();
+            var listUser = await this._userRepository.GetAll().Select(e => e.Name).ToListAsync();
 
             var listUserId = await this._userRepository.GetAll().Select(e => e.Id).ToListAsync();
 

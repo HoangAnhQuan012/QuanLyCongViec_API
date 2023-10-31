@@ -62,6 +62,7 @@ namespace quanLyCongViec.WorkReportManagement
             try
             {
                 var userId = this.AbpSession.UserId;
+
                 var getUnitId = await this._userRepository.GetAll().Where(e => e.Id == userId).Select(e => e.UnitId).FirstOrDefaultAsync();
                 var isManager = await this._UnitsRepository.GetAll().Where(e => e.Id == getUnitId).Select(e => e.ParentUnitId).FirstOrDefaultAsync();
 
@@ -87,7 +88,7 @@ namespace quanLyCongViec.WorkReportManagement
                                  Status = GlobalModel.WorkReportStatus[report.Status],
                                  StatusId = report.Status,
                                  CreationTime = report.CreationTime,
-                                 UserName = user.UserName,
+                                 UserName = user.Name,
                                  GetReportDetails = (from job in this._jobRepository.GetAll().Where(e => e.Id == report.JobId)
                                                      from dinhKem in this._workReportAttachedFilesRepository.GetAll().Where(e => e.WorkReportId == report.Id).DefaultIfEmpty()
                                                      select new GetAllDetails
