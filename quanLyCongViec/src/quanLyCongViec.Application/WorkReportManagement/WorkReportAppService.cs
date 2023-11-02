@@ -3,15 +3,20 @@ using Abp.Collections.Extensions;
 using Abp.Domain.Repositories;
 using Abp.Linq.Extensions;
 using Abp.UI;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using quanLyCongViec.Authorization.Users;
 using quanLyCongViec.Data.Excel.Dtos;
 using quanLyCongViec.DbEntities;
 using quanLyCongViec.Global;
 using quanLyCongViec.Global.Dto;
+using quanLyCongViec.Net.MimeTypes;
 using quanLyCongViec.WorkReportManagement.Dtos;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -57,7 +62,7 @@ namespace quanLyCongViec.WorkReportManagement
             _projectsRepository = projectsRepository;
         }
 
-        public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(GetAllInputDto input)
+        public async Task<PagedResultDto<GetAllWorkReportForViewDto>> GetAllWorkReport(GetAllInputDtoWorkReport input)
         {
             try
             {
@@ -345,6 +350,100 @@ namespace quanLyCongViec.WorkReportManagement
             // _appFolders.DemoFileDownloadFolder : Thư mục chưa file mẫu cần tải
             // _appFolders.TempFileDownloadFolder : Không được sửa
             return await GlobalFunction.DownloadFileMau(fileName, path, this._appFolder.TempFileDownloadFolder);
+        }
+
+        [HttpGet]
+        public async Task<FileDto> ExportExcel(GetAllInputDtoWorkReport input)
+        {
+            try
+            {
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+                if (input == null)
+                {
+                    throw new UserFriendlyException("Input is null");
+                }
+
+                input.SkipCount = 0;
+                input.MaxResultCount = int.MaxValue;
+
+                var list = await this.GetAllWorkReport(input);
+
+                using var package = new ExcelPackage();
+
+                ExcelWorksheet worksheet = package.Workbook.Worksheets.Add("WorkReport");
+                var nameStyle = package.Workbook.Styles.CreateNamedStyle("HyperLink");
+                nameStyle.Style.Font.UnderLine = true;
+                nameStyle.Style.Font.Color.SetColor(Color.Blue);
+
+                worksheet.Cells[1, 1].Value = "STT";
+                worksheet.Cells[1, 2].Value = "Date";
+                worksheet.Cells[1, 3].Value = "Sprint";
+                worksheet.Cells[1, 4].Value = "Module";
+                worksheet.Cells[1, 5].Value = "Job";
+                worksheet.Cells[1, 6].Value = "Time";
+                worksheet.Cells[1, 7].Value = "Kind of job";
+                worksheet.Cells[1, 8].Value = "Type";
+                worksheet.Cells[1, 9].Value = "Status";
+                worksheet.Cells[1, 10].Value = "Reportee";
+
+                using (var range = worksheet.Cells[1, 1, 1, 10])
+                {
+                    using var font = new Font("Calibri", 12, FontStyle.Bold);
+                    range.Style.Font.Bold = true;
+                    range.Style.Font.SetFromFont(font);
+                    range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                }
+
+                var rowStart = 2;
+                var stt = 1;
+                list.Items.ToList().ForEach(item =>
+                {
+                    var getJobName = item.GetReportDetails.Select(e => e.JobName).FirstOrDefault();
+                    var getKindOfJobName = item.GetReportDetails.Select(e => e.KindOfJobName).FirstOrDefault();
+                    var getTypeName = item.GetReportDetails.Select(e => e.TypeName).FirstOrDefault();
+
+                    worksheet.Cells[rowStart, 1].Value = stt;
+                    worksheet.Cells[rowStart, 2].Value = item.DeclarationDate.ToString("dd/MM/yyyy");
+                    worksheet.Cells[rowStart, 3].Value = item.SprineName;
+                    worksheet.Cells[rowStart, 4].Value = item.ModuleName;
+                    worksheet.Cells[rowStart, 5].Value = getJobName;
+                    worksheet.Cells[rowStart, 6].Value = item.Hours;
+                    worksheet.Cells[rowStart, 7].Value = getKindOfJobName;
+                    worksheet.Cells[rowStart, 8].Value = getTypeName;
+                    worksheet.Cells[rowStart, 9].Value = item.Status;
+                    worksheet.Cells[rowStart, 10].Value = item.UserName;
+
+                    stt++;
+                    rowStart++;
+
+                    using (ExcelRange dataRange = worksheet.Cells[1, 1, rowStart - 1, 10])
+                    {
+                        dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                        dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                        dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                        dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                    }
+                });
+
+                worksheet.Cells.AutoFitColumns();
+                worksheet.PrinterSettings.FitToHeight = 1;
+
+                var fileName = string.Join(".", new string[] { "WorkReport", "xlsx" });
+
+                using (var stream = new MemoryStream())
+                {
+                    package.SaveAs(stream);
+                };
+
+                var file = new FileDto(fileName, MimeTypeNames.ApplicationVndOpenxmlformatsOfficedocumentSpreadsheetmlSheet);
+                var filePath = Path.Combine(this._appFolder.TempFileDownloadFolder, file.FileToken);
+                package.SaveAs(new FileInfo(filePath));
+                return file;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         public async Task<string> GetProjectName(int projectId)
